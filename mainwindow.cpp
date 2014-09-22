@@ -147,6 +147,14 @@ void MainWindow::refreshOptions(int type)
             groupBoxZoomIter->setEnabled(true);
             groupBoxSavePath->setEnabled(true);
             generateButton->setEnabled(true);
+            minimalX->setRange(-2.0, 2.0);
+            minimalX->setValue(-2.0);
+            maximalX->setRange(-2.0, 2.0);
+            maximalX->setValue(2.0);
+            minimalY->setRange(-2.0, 2.0);
+            minimalY->setValue(-2.0);
+            maximalY->setRange(-2.0, 2.0);
+            maximalY->setValue(2.0);
             break;
         default:
             break;
@@ -245,7 +253,7 @@ void MainWindow::calculateMandelbrot()
             }
             else
             {
-                image.setPixel(x, y, qRgb(0,0,(i*250)/iterationMax));
+                image.setPixel(x, y, QColor::fromHsv((255*(i%iterationMax))/iterationMax, 250, 250).rgb());
             }
             generationBar->setValue((x*100)/(imageX-1));
         }
@@ -262,7 +270,56 @@ void MainWindow::calculateMandelbrot()
 
 void MainWindow::calculateJulia()
 {
-    generationInfos->setText(tr("Julia's fractal not implemented yet"));
+    optionsGroupBox->setEnabled(false);
+    generateButton->setEnabled(false);
+    generationInfos->setText(tr("Génération en cours..."));
+    generationBar->setValue(0);
+    clock_t tempsI, tempsF;
+
+    tempsI=clock();
+
+    double xMin=minimalX->value(), xMax=maximalX->value(), yMin=minimalY->value(), yMax=maximalY->value(), zoom=(double)(zoomValue->value()), cReel=cstReal->value(), cImag=cstImag->value();
+    int iterationMax=iterationNbr->value(), i;
+    double zReel, zImag, tmp;
+
+    int imageX=fabs(xMax-xMin)*zoom;
+    int imageY=fabs(yMax-yMin)*zoom;
+
+    QImage image = QImage(imageX, imageY, QImage::Format_RGB32);
+
+    for(int x=0; x<imageX; x++)
+    {
+        for(int y=0; y<imageY;y++)
+        {
+            zReel=0;
+            zImag=0;
+            i=0;
+            while (pow(zReel, 2)+pow(zImag, 2)<4 && i<iterationMax)
+            {
+                tmp=zReel;
+                zReel=pow(zReel, 2)-pow(zImag, 2)+cReel;
+                zImag=(2*zImag*tmp)+cImag;
+                i++;
+            }
+            if (i==iterationMax)
+            {
+                image.setPixel(x, y, qRgb(0,0,0));
+            }
+            else
+            {
+                image.setPixel(x, y, QColor::fromHsv((255*(i%iterationMax))/iterationMax, 250, 250).rgb());
+            }
+            generationBar->setValue((x*100)/(imageX-1));
+        }
+    }
+    tempsF=clock();
+    generationInfos->setText(tr("Saving the picture..."));
+    image.save(savePath->text());
+    generationInfos->setText(tr("Generated in ")+QString().setNum((double)(tempsF-tempsI)/CLOCKS_PER_SEC)+tr(" seconds."));
+    optionsGroupBox->setEnabled(true);
+    generateButton->setEnabled(true);
+
+    return;
 }
 
 MainWindow::~MainWindow()
